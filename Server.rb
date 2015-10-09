@@ -31,7 +31,8 @@ class Server
     if input=="Helo text\n"
      client.puts "HELO text IP:[#{@remote_ip}] Port:[#{@remote_port}]\n"
      elsif input=="KILL_SERVICE\n"
-     abort
+     @socket.close
+     abort("Goodbye")
      else
      client.puts "Sorry buddy, not programmed to deal with that input yet\n"
     end

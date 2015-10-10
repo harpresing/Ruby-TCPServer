@@ -1,3 +1,3 @@
 @echo off
 
-START cmd bumdle install
+START cmd bundle install

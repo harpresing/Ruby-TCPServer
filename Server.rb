@@ -1,6 +1,8 @@
 # A skeleton TCPserver
+$LOAD_PATH << File.dirname(__FILE__)
 require 'socket'
-require 'thread/pool'
+require "bin/threadpool.rb"
+
 class Server
 
   def initialize(host,port)

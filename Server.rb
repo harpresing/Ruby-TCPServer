@@ -1,7 +1,7 @@
 # A skeleton TCPserver
 $LOAD_PATH << File.dirname(__FILE__)
 require 'socket'
-require "bin/threadpool.rb"
+require "lib/threadpool.rb"
 
 class Server
 

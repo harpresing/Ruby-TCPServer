@@ -55,6 +55,7 @@ class Server
       puts "Server Shutting down \n"
       @serverSocket.close   
       abort("Goodbye")
+      exit
   end
 
   

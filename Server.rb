@@ -8,11 +8,13 @@ class Server
   def initialize(host,port)
     @host=host
     @port=port
-    @socket= TCPServer.open(@host,@port)
+    @descriptors=Array.new #Stores all client sockets and the server socket
+    @serverSocket= TCPServer.open(@host,@port)
+    @descriptors.push(@serverSocket)
     @threadPool=Thread.pool(4) #There can be a maximum of 4 threads at a time
     @sock_domain 
-    @remote_port
-    @remote_hostname
+    @remote_port 
+    @remote_hostname 
     @remote_ip
     @StudentID=ARGV[2]||152
   end
@@ -36,19 +38,32 @@ class Server
     if input[0,4]=="HELO"
       client.puts "#{input}IP:#{@host}\nPort:#{@port}\nStudentID:#{@StudentID}\n"
     elsif input=="KILL_SERVICE\n"
-      client.puts "Goodbye"
-      @socket.close
-      abort("Goodbye")
+      terminate
     else
       client.puts "Invalid Input \n"
     end
   end
-    
+
+  def terminate #terminates all socket connections, terminating clients first
+    @descriptors.each do |socket|  
+      if socket!= @serverSocket
+         socket.puts "Goodbye"
+         socket.close
+      end
+    end
+      
+      puts "Server Shutting down \n"
+      @serverSocket.close   
+      abort("Goodbye")
+  end
+
+  
   def run
     puts "Server running on Port #{@port} ..."
     while true
       @threadPool.process {
-      client=@socket.accept 
+      client=@serverSocket.accept 
+      @descriptors.push(client)
 	    welcome(client)
       new_Connection(client)
       }

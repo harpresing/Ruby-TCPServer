@@ -24,15 +24,34 @@ class Server
   def welcome
     @sock_domain, @remote_port, @remote_hostname, @remote_ip = @client.peeraddr
     puts "log: Connection from #{@remote_ip} at port #{@remote_port}"
+    
     flag=checkname
       if flag==1 
         checkname
       end
   end
+  
+  def chatRoom
+  end
+  
+
+  def servJoinReq
+    i=0;
+    join_details=Array.new    
+    while (i<4)
+        input=@client.gets.chomp
+        join_details[i]=input.slice((input.index(':')+1)..input.length)
+        i+=1
+    end
+    chatRoom
+
+    @client.puts "JOINED_CHATROOM:#{join_details[0]}\nSERVER_IP:#{@host}\nPORT:#{@port}\nROOM_REF:\nJOIN_ID:\n"
+  end
+
 
   def checkname #checks if username is available
     flag=0
-    input=@client.gets
+    input=@client.gets.chomp
       @clientName.each do |name| #If username is already taken, flag is set to 1
         if name==input              
           flag=1
@@ -41,6 +60,7 @@ class Server
       if flag==0
         @clientName.push(input)
         @client.puts "Success"
+        puts "log: Username #{input} created for client #{@remote_port}"
       else
         @client.puts "Username taken, try something else.."
       end
@@ -89,6 +109,7 @@ class Server
       @client=@serverSocket.accept 
       @descriptors.push(@client)
 	    welcome
+      servJoinReq
       new_Connection
       }
     end

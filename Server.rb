@@ -9,11 +9,12 @@ class Server
     @host=host
     @port=port
     @descriptors=Array.new #Stores all client sockets and the server socket
-    @clientName=Array.new
+    @clientName=Array.new #Probably this isn't of any use either
+    @clientNameCurrent #This is of no use
     @serverSocket= TCPServer.open(@host,@port)
     @descriptors.push(@serverSocket)
-    @client
     @threadPool=Thread.pool(4) #There can be a maximum of 4 threads at a time
+    @retryJoinReqFlag=0
     @sock_domain 
     @remote_port 
     @remote_hostname 
@@ -21,69 +22,88 @@ class Server
     @StudentID=ARGV[2]||152
   end
   
-  def welcome
-    @sock_domain, @remote_port, @remote_hostname, @remote_ip = @client.peeraddr
+  def welcome(client)
+    @sock_domain, @remote_port, @remote_hostname, @remote_ip = client.peeraddr #this is of no use either
     puts "log: Connection from #{@remote_ip} at port #{@remote_port}"
-    
-    flag=checkname
-      if flag==1 
-        checkname
-      end
   end
   
   def chatRoom
+    puts "log: Creating chatroom"
   end
   
 
-  def servJoinReq
+  def servJoinReq(client)
     i=0;
     join_details=Array.new    
     while (i<4)
-        input=@client.gets.chomp
+        input=client.gets.chomp
         join_details[i]=input.slice((input.index(':')+1)..input.length)
+        if i==3
+            flag=checkname(join_details[3], client)
+            if flag==1 # If the username is already taken, get response from client if it wants to retry or not
+              #checkname
+              input=client.gets
+              if input[0,5]=="Close" # If the answer recieved is close, then close the connection
+                puts "log: Closing connection to client on port #{@remote_port}"
+                @descriptors.pop(client)
+                client.close
+              else    #The client wants to retry, come out of the function servJoinReq
+                @retryJoinReqFlag=1
+                break
+              end
+            end
+        end
         i+=1
     end
-    chatRoom
-
-    @client.puts "JOINED_CHATROOM:#{join_details[0]}\nSERVER_IP:#{@host}\nPORT:#{@port}\nROOM_REF:\nJOIN_ID:\n"
+    puts "log:break caused end of while loop"
+    
+      if @retryJoinReqFlag==0
+        chatRoom
+        client.puts "JOINED_CHATROOM:#{join_details[0]}\nSERVER_IP:#{@host}\nPORT:#{@port}\nROOM_REF:\nJOIN_ID:\n"
+      else 
+        puts "log: going back to run"
+      end
   end
 
+  def raiseError(id, client)
+    if id==0
+      client.puts "ERROR_CODE:#{id}\nERROR_DESCRIPTION: Username already taken!! "
+    end
+  end
 
-  def checkname #checks if username is available
+  
+  def checkname(input, client) #checks if username is available, returns 1 if it's already taken, 0 if it's available
     flag=0
-    input=@client.gets.chomp
       @clientName.each do |name| #If username is already taken, flag is set to 1
         if name==input              
           flag=1
         end
       end
-      if flag==0
+      if flag==0  #if username is available, it is pushed into the array @clientName
         @clientName.push(input)
-        @client.puts "Success"
-        puts "log: Username #{input} created for client #{@remote_port}"
+        puts "log: Username #{input} created for client on port #{@remote_port}"
       else
-        @client.puts "Username taken, try something else.."
+        raiseError(0, client)
       end
       return flag
   end
 
-
-    def new_Connection
+  def new_Connection(client)
       while true
-      input=@client.gets
-      puts "log: got input from client"
-      puts "From Client: #{input}"
-      handle_Connection(input)
+      input=client.gets
+      puts "log: got input from client #{@remote_port}"
+      puts "From #{client} #{@remote_port}: #{input}"
+      handle_Connection(input, client)
       end
   end
 
-  def handle_Connection(input)
+  def handle_Connection(input, client)
     if input[0,4]=="HELO"
-      @client.puts "#{input}IP:#{@host}\nPort:#{@port}\nStudentID:#{@StudentID}\n"
+      client.puts "#{input}IP:#{@host}\nPort:#{@port}\nStudentID:#{@StudentID}\n"
     elsif input=="KILL_SERVICE\n"
       terminate
     else
-      @client.puts "Invalid Input \n"
+      client.puts "Invalid Input \n"
     end
   end
 
@@ -106,11 +126,16 @@ class Server
     puts "Server running on Port #{@port} ..."
     while true
       @threadPool.process {
-      @client=@serverSocket.accept 
-      @descriptors.push(@client)
-	    welcome
-      servJoinReq
-      new_Connection
+      client=@serverSocket.accept 
+      @descriptors.push(client)
+      welcome(client)
+      servJoinReq(client)
+      if @retryJoinReqFlag==1
+        puts "Inside run again, calling servJoinReq"
+        @retryJoinReqFlag=0
+        servJoinReq(client)
+      end
+      new_Connection(client)
       }
     end
   end

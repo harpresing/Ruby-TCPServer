@@ -6,22 +6,40 @@ def initialize(host,port)
 	@s = TCPSocket.new(host, port)
 	@clientName
 	@chatroom
+	@retryJoinReqFlag=0
 	puts "log: Starting Session \n"
 end
 
-def username
-	puts "Enter a username:"
-	@clientName= $stdin.gets
-	@s.puts @clientName
-	answer=@s.gets
-	puts answer
-	if answer[0,7]!="Success"
-		 username
+def retryResponse
+		puts "Do you want to retry?(y/n)"
+		choice=$stdin.gets
+		if choice[0]=="y"
+			@s.puts "Retrying"
+			@retryJoinReqFlag=1
+		elsif choice[0]=="n"
+            @s.puts "Close the connection"
+            @s.close
+			abort("Goodbye")
+		else
+			puts "Invalid choice...try again"
+			retryResponse
+		end
+end
+
+def detectError
+	input=@s.gets
+	if input[0,5]=="ERROR"
+		puts "#{input}#{@s.gets}"
+		retryResponse
+	else
+		puts input
+		@detectErrorFlag=1
 	end
 end
 
 def sendJoinRequest
-	username
+	puts "Enter a username:"
+	@clientName= $stdin.gets
 	puts "Enter the name of the chatroom you would like to join"
 	@chatroom=$stdin.gets.chomp
 	@s.puts "JOIN_CHATROOM:#{@chatroom}\nClient_IP:\nPORT:\nCLIENT_NAME:#{@clientName}"
@@ -29,7 +47,12 @@ end
 
 def getJoinResponse
 	i=0;
-	while i<=4
+	if @detectErrorFlag==1
+		j=3
+	else
+		j=4
+	end
+	while i<=j
 		puts @s.gets
 		i+=1
 	end
@@ -37,6 +60,12 @@ end
 
 def run
     sendJoinRequest
+    detectError
+    if @retryJoinReqFlag==1
+    	puts "Calling servJoinRequest again"
+    	@retryJoinReqFlag=0
+    	sendJoinRequest
+    end
     getJoinResponse 
 	
 	while !(@s.closed?) 

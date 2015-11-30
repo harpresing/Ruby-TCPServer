@@ -12,18 +12,18 @@ puts "log: Starting Session \n"
 		s.puts l
 
 		if l[0,4]=="HELO"
-			puts "From Server: "
+			puts "**************Hello Message**************\n"
 			i=0
-			while(lineFromServer=s.gets)
+			while(i<=3)
+				lineFromServer=s.gets
 			 	puts "#{lineFromServer}"
 			 	i+=1
-			 	if(i==4)
-			 	   break
-				end
 			end
+			puts "*****************************************\n"
+		elsif l[0,4]=="KILL"
+			puts "Terminating Server socket"
     	else
-	    	lineFromServer=s.gets
-	    	puts "From Server: #{lineFromServer}"
+	    	puts "Invalid base message"
     	end
     end
 

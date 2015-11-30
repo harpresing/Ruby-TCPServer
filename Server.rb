@@ -40,14 +40,13 @@ class Server
     elsif input=="KILL_SERVICE\n"
       terminate
     else
-      client.puts "Invalid Input \n"
+      puts "Invalid Input \n"
     end
   end
 
   def terminate #terminates all socket connections, terminating clients first
     @descriptors.each do |socket|  
       if socket!= @serverSocket
-         socket.puts "Goodbye"
          socket.close
       end
     end
